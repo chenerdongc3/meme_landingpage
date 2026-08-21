@@ -12,6 +12,7 @@
   --refusal: 0;
   --archive: 0;
   --tear: 0;
+  --glass: 0;
   font-family: Inter, "PingFang SC", "Noto Sans CJK SC", "Microsoft YaHei", ui-sans-serif, system-ui, sans-serif;
 }
 
@@ -330,6 +331,29 @@ body::before {
 
 .chapter-body p { margin: 0; }
 .chapter-body p + p { margin-top: 9px; }
+
+/* 玻璃拟态:当文字与 3D 模型在视觉上重叠时,把活动章节文字用毛玻璃面板提到幕前。
+   强度由 --glass(0~1)驱动,仅在该章节激活且与模型叠放时显现,常态下完全透明。 */
+.chapter.is-active::before {
+  content: "";
+  position: absolute;
+  inset: -22px -26px;
+  z-index: -1;
+  border-radius: 18px;
+  background: rgba(251, 250, 246, 0.42);
+  backdrop-filter: blur(16px) saturate(150%);
+  -webkit-backdrop-filter: blur(16px) saturate(150%);
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  box-shadow:
+    0 8px 32px rgba(36, 34, 29, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  opacity: var(--glass, 0);
+  transform: scale(calc(0.985 + var(--glass, 0) * 0.015));
+  transition: opacity 0.28s ease, transform 0.28s ease;
+  pointer-events: none;
+}
+
+.chapter--final.is-active::before { inset: -18px -22px; }
 
 .chapter--alert h2 {
   color: color-mix(in srgb, var(--ink), var(--red) calc(var(--refusal) * 58%));

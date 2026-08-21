@@ -1,4 +1,4 @@
-import { clamp01, deriveStoryState } from './story-timeline.js';
+import { clamp01, deriveStoryState, smoothstep } from './story-timeline.js';
 import { createMeScene } from './me-scene.js';
 import { initI18n, getStoredLang, STRINGS } from './i18n.js';
 
@@ -77,12 +77,30 @@ function updateFromScroll() {
   targetProgress = clamp01((window.scrollY - storyTop) / storyDistance);
 }
 
+// 玻璃拟态强度:文字与 3D 模型重叠时把文字用毛玻璃面板提到幕前。
+// 居中型号(p1 顶栏 / p8 底栏)文字直接叠在模型上方,始终开启;
+// 侧排内容章节(p2/p3/p4/p7)在章节边界处模型弧形穿越画面中心、最易与文字重叠,
+// 此时高强度呈现;章节中部模型停在画面一侧、文字在另一侧无重叠,不启用,避免常态厚重感。
+function glassIntensity(state) {
+  const { chapter, chapterProgress } = state;
+  if (chapter === 'p1' || chapter === 'p8') return 1;
+  const half = 0.24; // 章节首尾各约 24% 区间(与模型弧形过渡窗口吻合)
+  const enter = smoothstep(chapterProgress / half);
+  const exit = smoothstep((1 - chapterProgress) / half);
+  // 谷形:边界处 → 1(重叠),章节中部 → 0(无重叠)
+  return Math.max(1 - enter, 1 - exit);
+}
+
 function updateDom(state) {
   stage.style.setProperty('--progress', state.progress.toFixed(4));
   stage.style.setProperty('--chapter-progress', state.chapterProgress.toFixed(4));
   stage.style.setProperty('--refusal', state.refusal.toFixed(4));
   stage.style.setProperty('--archive', state.archive.toFixed(4));
   stage.style.setProperty('--tear', state.tear.toFixed(4));
+  // 玻璃拟态强度:当文字与 3D 模型在视觉上重叠时,用毛玻璃面板把文字提到幕前。
+  // 内容章节(p2/p3/p4/p7)仅在进出边界附近短暂启用,避免常态下的厚重感;
+  // 居中型号(p1 顶栏 / p8 底栏)与模型直接叠放,始终开启。
+  stage.style.setProperty('--glass', glassIntensity(state).toFixed(4));
   root.className = root.className
     .replace(/\bis-p\d+\b/g, '')
     .replace(/\s+/g, ' ')
